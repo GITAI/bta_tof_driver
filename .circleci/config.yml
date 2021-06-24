@@ -12,7 +12,8 @@ jobs:
           username: $DOCKER_USER
           password: $DOCKER_PASSWORD
     steps:
-      - gitai/lint
+      - gitai/lint:
+          style_exclude_filter_command: grep -v CMakeLists.txt
       - slack/status
 
   melodic:
