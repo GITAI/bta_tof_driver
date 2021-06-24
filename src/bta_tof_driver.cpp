@@ -645,7 +645,7 @@ int BtaRos::initialize()
     while (!config_init_)
     {
 	ROS_DEBUG("Waiting for dynamic reconfigure configuration.");
-	boost::this_thread::sleep(boost::posix_time::seconds(0.1));
+	boost::this_thread::sleep(boost::posix_time::milliseconds(100));
     }
     ROS_DEBUG("Dynamic reconfigure configuration received.");
 
