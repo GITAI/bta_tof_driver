@@ -18,6 +18,9 @@ MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## check required modules
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
+execute_process(COMMAND install.sh
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  TIMEOUT 60)
 find_package(bta REQUIRED)
 
 find_package(OpenCV REQUIRED COMPONENTS core imgproc)
