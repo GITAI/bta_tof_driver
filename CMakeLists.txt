@@ -17,10 +17,13 @@ endif("${CMAKE_BUILD_TYPE}" STREQUAL "")
 MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## check required modules
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
-execute_process(COMMAND install.sh
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  TIMEOUT 60)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
+find_package(bta QUIET)
+if (NOT bta_FOUND)
+  execute_process(COMMAND ./install.sh
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    TIMEOUT 60)
+endif()
 find_package(bta REQUIRED)
 
 find_package(OpenCV REQUIRED COMPONENTS core imgproc)
