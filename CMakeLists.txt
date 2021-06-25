@@ -18,10 +18,7 @@ MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
 ## check required modules
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules")
-execute_process(COMMAND install.sh
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  TIMEOUT 60)
-find_package(bta REQUIRED)
+# find_package(bta REQUIRED)
 
 find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 
@@ -64,12 +61,52 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES bta_tof_driver sensor2d
   CATKIN_DEPENDS dynamic_reconfigure roscpp sensor_msgs std_msgs pcl_ros pcl_conversions image_transport camera_info_manager nodelet
-  DEPENDS bta GStreamer GLIB GObject
+  # DEPENDS bta GStreamer GLIB GObject
 )
 
 ###########
 ## Build ##
 ###########
+
+execute_process(COMMAND dpkg --print-architecture
+  OUTPUT_VARIABLE ARCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (NOT "${ARCH}" STREQUAL "amd64")
+  return()
+endif()
+
+# Download bta tof driver
+find_program(RSYNC_COMMAND rsync)
+file(DOWNLOAD
+  http://datasheets.bluetechnix.at/goto/BltTofApi/v3.0/binaries/BltTofApi_v3.0.1_Lin_noUsb_noJpg.zip
+  ${CMAKE_BINARY_DIR}/BltTofApi_v3.0.1_Lin_noUsb_noJpg.zip
+  TIMEOUT 60
+  EXPECTED_MD5 3294e8f1e4a1491b757a70cb3fb20be9)
+add_custom_target(bta)
+add_custom_command(TARGET bta
+  PRE_BUILD
+  COMMAND ${CMAKE_COMMAND} -E tar zxf BltTofApi_v3.0.1_Lin_noUsb_noJpg.zip
+  COMMAND ${RSYNC_COMMAND} -arm BltTofApi_v3.0.1_Lin_noUsb_noJpg/inc/ ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  COMMAND ${CMAKE_COMMAND} -E make_directory BltTofApi_v3.0.1_Lin_noUsb_noJpg/lib64
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  DEPENDS "${CMAKE_BINARY_DIR}/BltTofApi_v3.0.1_Lin_noUsb_noJpg.zip"
+  VERBATIM)
+add_custom_command(TARGET bta
+  PRE_BUILD
+  COMMAND ${CMAKE_COMMAND} -E tar zxf ../lib/Lin_x64/libbta.so.tar.gz
+  COMMAND ${RSYNC_COMMAND} -arm ./ ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_LIB_DESTINATION}
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/BltTofApi_v3.0.1_Lin_noUsb_noJpg/lib64"
+  DEPENDS "${CMAKE_BINARY_DIR}/BltTofApi_v3.0.1_Lin_noUsb_noJpg/lib64"
+  "${CMAKE_BINARY_DIR}/BltTofApi_v3.0.1_Lin_noUsb_noJpg/lib/Lin_x64/libbta.so.tar.gz"
+  VERBATIM)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/BltTofApi_v3.0.1_Lin_noUsb_noJpg/inc/
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+install(DIRECTORY ${CMAKE_BINARY_DIR}/BltTofApi_v3.0.1_Lin_noUsb_noJpg/lib64/
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/${CATKIN_PACKAGE_LIB_DESTINATION}
+  USE_SOURCE_PERMISSIONS)
+set(bta_INCLUDE_DIRS ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+set(bta_LIBRARIES -lbta)
+link_directories(${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_LIB_DESTINATION})
 
 include_directories(include
   ${catkin_INCLUDE_DIRS}
@@ -83,7 +120,7 @@ include_directories(include
 
 add_library(${PROJECT_NAME} src/${PROJECT_NAME}.cpp)
 target_link_libraries(${PROJECT_NAME} turbojpeg ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg) 
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg bta)
 
 add_library(BtaRosDriverNodelet src/${PROJECT_NAME}_nodelet.cpp)
 target_link_libraries(BtaRosDriverNodelet ${PROJECT_NAME} turbojpeg ${OpenCV_LIBRARIES} ${catkin_LIBRARIES} ${bta_LIBRARIES})
